@@ -1,0 +1,181 @@
+{
+  "name": "abap-mcp-vscode",
+  "displayName": "ABAP MCP — Clean Core & RAP Tools",
+  "description": "Offline SAP ABAP linting, ABAP Cloud / Clean Core readiness, RAP scaffolding and outline in VS Code — powered by abap-mcp (abaplint). No SAP system, credentials or network required. Also registers abap-mcp as an MCP server for Copilot agent mode.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "Akshay Palimkar",
+  "publisher": "palimkarakshay",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/palimkarakshay/abap-mcp-vscode.git"
+  },
+  "homepage": "https://github.com/palimkarakshay/abap-mcp",
+  "bugs": {
+    "url": "https://github.com/palimkarakshay/abap-mcp-vscode/issues"
+  },
+  "keywords": [
+    "sap",
+    "abap",
+    "rap",
+    "abaplint",
+    "clean-core",
+    "abap-cloud",
+    "mcp",
+    "static-analysis",
+    "linter"
+  ],
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "AI",
+    "Other"
+  ],
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:abap"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "abap",
+        "aliases": [
+          "ABAP",
+          "abap"
+        ],
+        "extensions": [
+          ".abap",
+          ".asddls",
+          ".asbdef",
+          ".srvdsrv",
+          ".asddlx"
+        ]
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "abapMcpProvider",
+        "label": "ABAP MCP (abap-mcp)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "abapMcp.lint",
+        "title": "ABAP: Lint",
+        "category": "ABAP"
+      },
+      {
+        "command": "abapMcp.readiness",
+        "title": "ABAP: Cloud Readiness",
+        "category": "ABAP"
+      },
+      {
+        "command": "abapMcp.format",
+        "title": "ABAP: Format",
+        "category": "ABAP"
+      },
+      {
+        "command": "abapMcp.scaffold",
+        "title": "ABAP: Scaffold RAP BO",
+        "category": "ABAP"
+      },
+      {
+        "command": "abapMcp.outline",
+        "title": "ABAP: Outline",
+        "category": "ABAP"
+      },
+      {
+        "command": "abapMcp.writeMcpJson",
+        "title": "ABAP: Register abap-mcp in .vscode/mcp.json",
+        "category": "ABAP"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == abap",
+          "command": "abapMcp.lint",
+          "group": "abapMcp@1"
+        },
+        {
+          "when": "resourceLangId == abap",
+          "command": "abapMcp.readiness",
+          "group": "abapMcp@2"
+        },
+        {
+          "when": "resourceLangId == abap",
+          "command": "abapMcp.outline",
+          "group": "abapMcp@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ABAP MCP",
+      "properties": {
+        "abapMcp.cliPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the abap-mcp CLI entry (`dist/cli.js`). If empty, the extension resolves the `abap-mcp` package from its own `node_modules`, then falls back to a globally installed `abap-mcp`."
+        },
+        "abapMcp.nodePath": {
+          "type": "string",
+          "default": "node",
+          "description": "Path to the Node.js executable used to run the abap-mcp CLI."
+        },
+        "abapMcp.abapVersion": {
+          "type": "string",
+          "default": "v758",
+          "enum": [
+            "v700",
+            "v702",
+            "v740sp02",
+            "v740sp05",
+            "v740sp08",
+            "v750",
+            "v751",
+            "v752",
+            "v753",
+            "v754",
+            "v755",
+            "v756",
+            "v757",
+            "v758",
+            "Cloud",
+            "OpenABAP"
+          ],
+          "description": "ABAP version used by lint (passed as --abap-version). Use 'Cloud' to lint against the ABAP Cloud language scope."
+        },
+        "abapMcp.lintPreset": {
+          "type": "string",
+          "default": "style",
+          "enum": [
+            "syntax-only",
+            "style",
+            "full"
+          ],
+          "description": "abaplint rule preset used by ABAP: Lint."
+        },
+        "abapMcp.lintOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run ABAP: Lint automatically when an ABAP file is saved."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc -p ./ --noEmit",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.101.0",
+    "typescript": "^5.7.0"
+  }
+}
