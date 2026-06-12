@@ -2,10 +2,10 @@
  * abap-mcp-vscode — brings abap-mcp's offline ABAP analysis into the editor.
  *
  * Two integration angles:
- *  1. MCP server registration (mcpProvider.ts): abap-mcp's 8 tools surface in
+ *  1. MCP server registration (mcpProvider.ts): abap-mcp's 9 tools surface in
  *     Copilot agent mode via vscode.lm.registerMcpServerDefinitionProvider.
  *  2. Native editor commands (this file): Lint / Cloud Readiness / Format /
- *     Scaffold RAP BO / Outline, each shelling out to the abap-mcp CLI (or its
+ *     Scaffold RAP BO / Outline / Compare Before/After, each shelling out to the abap-mcp CLI (or its
  *     formatAbap library export) and rendering results as Problems-panel
  *     diagnostics or an output channel.
  */
@@ -19,7 +19,7 @@ import { CliNotFoundError, resolveCli, runCli, runCliJson } from "./cli";
 import { findingsToDiagnostics } from "./diagnostics";
 import { formatAbapBuffer } from "./format";
 import { registerMcpProvider } from "./mcpProvider";
-import type { FileOutline, LintResult, ReadinessResult } from "./types";
+import type { CompareReport, FileOutline, LintResult, ReadinessResult } from "./types";
 
 let diagnostics: vscode.DiagnosticCollection;
 let output: vscode.OutputChannel;
@@ -39,6 +39,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("abapMcp.format", () => withActiveAbap(context, runFormat)),
     vscode.commands.registerCommand("abapMcp.outline", () => withActiveAbap(context, runOutline)),
     vscode.commands.registerCommand("abapMcp.scaffold", () => runScaffold(context)),
+    vscode.commands.registerCommand("abapMcp.compare", () => runCompare(context)),
     vscode.commands.registerCommand("abapMcp.writeMcpJson", () => writeMcpJson(context)),
   );
 
@@ -326,6 +327,91 @@ async function writeScaffoldToFolder(context: vscode.ExtensionContext, baseArgs:
   } else {
     void vscode.window.showErrorMessage(`ABAP MCP: scaffold failed (exit ${code}). See Output.`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// ABAP: Compare Before/After
+// ---------------------------------------------------------------------------
+
+async function runCompare(context: vscode.ExtensionContext): Promise<void> {
+  const afterPick = await vscode.window.showOpenDialog({
+    canSelectFolders: false,
+    canSelectFiles: true,
+    canSelectMany: false,
+    filters: { "ABAP files": ["abap", "asddls", "asbdef", "srvdsrv", "asddlx"] },
+    openLabel: "Select AFTER file (the reworked version)",
+  });
+  if (!afterPick || afterPick.length === 0) return;
+
+  const beforePick = await vscode.window.showOpenDialog({
+    canSelectFolders: false,
+    canSelectFiles: true,
+    canSelectMany: false,
+    filters: { "ABAP files": ["abap", "asddls", "asbdef", "srvdsrv", "asddlx"] },
+    openLabel: "Select BEFORE file (the original version)",
+  });
+  if (!beforePick || beforePick.length === 0) return;
+
+  const cfg = vscode.workspace.getConfiguration("abapMcp");
+  const preset = cfg.get<string>("lintPreset") || "style";
+  const beforePath = beforePick[0].fsPath;
+  const afterPath = afterPick[0].fsPath;
+
+  const r = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: "ABAP MCP: comparing before/after…" },
+    () => runCliJson<CompareReport>(context.extensionPath, ["compare", beforePath, afterPath, "--preset", preset, "--json"]),
+  );
+
+  output.clear();
+  output.appendLine(`ABAP compare — ${beforePath} → ${afterPath}`);
+  output.appendLine(`Preset: ${preset}`);
+  output.appendLine("");
+  output.appendLine(`Score:   ${r.before.score} → ${r.after.score}  (grade ${r.before.grade} → ${r.after.grade})`);
+  output.appendLine(`Blockers: ${r.before.cloudBlockerCount} → ${r.after.cloudBlockerCount}`);
+  output.appendLine(`Findings: ${r.before.findingCount} → ${r.after.findingCount}  (${r.unchangedCount} unchanged)`);
+  output.appendLine("");
+
+  if (r.resolved.length > 0) {
+    output.appendLine(`Resolved (${r.resolved.length}):`);
+    for (const f of r.resolved) output.appendLine(`  ✓ ${f.file}:${f.line} [${f.rule}] ${f.message}`);
+    output.appendLine("");
+  }
+  if (r.introduced.length > 0) {
+    output.appendLine(`Introduced (${r.introduced.length}):`);
+    for (const f of r.introduced) output.appendLine(`  ✗ ${f.file}:${f.line} [${f.rule}] ${f.message}`);
+    output.appendLine("");
+  }
+
+  const oc = r.outlineChanges;
+  const hasStructuralChange =
+    oc.classesAdded.length || oc.classesRemoved.length ||
+    oc.methodsAdded.length || oc.methodsRemoved.length ||
+    oc.formsAdded.length || oc.formsRemoved.length;
+  if (hasStructuralChange) {
+    output.appendLine("Structure changes:");
+    if (oc.classesAdded.length) output.appendLine(`  classes added:    ${oc.classesAdded.join(", ")}`);
+    if (oc.classesRemoved.length) output.appendLine(`  classes removed:  ${oc.classesRemoved.join(", ")}`);
+    if (oc.methodsAdded.length) output.appendLine(`  methods added:    ${oc.methodsAdded.join(", ")}`);
+    if (oc.methodsRemoved.length) output.appendLine(`  methods removed:  ${oc.methodsRemoved.join(", ")}`);
+    if (oc.formsAdded.length) output.appendLine(`  forms added:      ${oc.formsAdded.join(", ")}`);
+    if (oc.formsRemoved.length) output.appendLine(`  forms removed:    ${oc.formsRemoved.join(", ")}`);
+    output.appendLine("");
+  }
+
+  output.appendLine(`Note: ${r.matchNote}`);
+  output.show(true);
+
+  // Surface introduced findings as diagnostics on the after file.
+  if (r.introduced.length > 0) {
+    const afterDoc = await vscode.workspace.openTextDocument(afterPick[0]);
+    diagnostics.set(afterDoc.uri, findingsToDiagnostics(r.introduced, afterDoc));
+  }
+
+  const scoreDelta = r.after.score - r.before.score;
+  const sign = scoreDelta >= 0 ? "+" : "";
+  void vscode.window.showInformationMessage(
+    `ABAP compare: ${r.resolved.length} resolved, ${r.introduced.length} introduced, score ${sign}${scoreDelta} (${r.before.grade}→${r.after.grade}) — see Output.`,
+  );
 }
 
 // ---------------------------------------------------------------------------

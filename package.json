@@ -88,6 +88,11 @@
         "category": "ABAP"
       },
       {
+        "command": "abapMcp.compare",
+        "title": "ABAP: Compare Before/After",
+        "category": "ABAP"
+      },
+      {
         "command": "abapMcp.writeMcpJson",
         "title": "ABAP: Register abap-mcp in .vscode/mcp.json",
         "category": "ABAP"

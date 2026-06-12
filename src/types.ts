@@ -79,3 +79,32 @@ export interface FileOutline {
   forms: string[];
   parseable: boolean;
 }
+
+export type ReadinessGrade = "A" | "B" | "C" | "D";
+
+export interface CompareSide {
+  findingCount: number;
+  cloudBlockerCount: number;
+  score: number;
+  grade: ReadinessGrade;
+}
+
+export interface OutlineChanges {
+  classesAdded: string[];
+  classesRemoved: string[];
+  methodsAdded: string[];
+  methodsRemoved: string[];
+  formsAdded: string[];
+  formsRemoved: string[];
+}
+
+/** Shape of `abap-mcp compare BEFORE AFTER --json`. */
+export interface CompareReport {
+  resolved: Finding[];
+  introduced: Finding[];
+  unchangedCount: number;
+  before: CompareSide;
+  after: CompareSide;
+  outlineChanges: OutlineChanges;
+  matchNote: string;
+}
