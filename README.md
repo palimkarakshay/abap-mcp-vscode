@@ -7,10 +7,19 @@ directly into Visual Studio Code. **No SAP system, credentials, or network requi
 Two integrations in one extension:
 
 1. **MCP server registration** — registers abap-mcp as a stdio MCP server with VS Code's Language
-   Model API. Once installed, abap-mcp's 8 tools appear automatically in **Copilot agent mode** —
-   nothing to configure.
+   Model API. Once installed, abap-mcp's 12 tools and 3 guided-workflow prompts appear
+   automatically in **Copilot agent mode** — nothing to configure.
 2. **Native editor commands** — analyze the file in front of you with the Command Palette or the
    editor context menu; findings land in the **Problems panel** and an **ABAP MCP output channel**.
+
+## Install
+
+- **From VSIX (today):** download `abap-mcp-vscode-<version>.vsix` from the
+  [releases page](https://github.com/palimkarakshay/abap-mcp-vscode/releases), then in VS Code:
+  Extensions view → `…` menu → **Install from VSIX…** (or `code --install-extension <file>.vsix`).
+- **Marketplace:** publication pending.
+- **Just want the MCP server, no extension?** One command registers it for Copilot agent mode:
+  `code --add-mcp '{"name":"abap-mcp","command":"npx","args":["-y","abap-mcp"]}'`.
 
 ## Commands
 
