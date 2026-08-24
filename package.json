@@ -2,7 +2,7 @@
   "name": "abap-mcp-vscode",
   "displayName": "ABAP MCP — Clean Core & RAP Tools",
   "description": "Offline SAP ABAP linting, ABAP Cloud / Clean Core readiness, RAP scaffolding and outline in VS Code — powered by abap-mcp (abaplint). No SAP system, credentials or network required. Also registers abap-mcp as an MCP server for Copilot agent mode.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "author": "Akshay Palimkar",
   "publisher": "palimkarakshay",
@@ -78,6 +78,11 @@
         "category": "ABAP"
       },
       {
+        "command": "abapMcp.fix",
+        "title": "ABAP: Auto-fix (deterministic)",
+        "category": "ABAP"
+      },
+      {
         "command": "abapMcp.scaffold",
         "title": "ABAP: Scaffold RAP BO",
         "category": "ABAP"
@@ -104,6 +109,11 @@
           "when": "resourceLangId == abap",
           "command": "abapMcp.lint",
           "group": "abapMcp@1"
+        },
+        {
+          "when": "resourceLangId == abap",
+          "command": "abapMcp.fix",
+          "group": "abapMcp@2"
         },
         {
           "when": "resourceLangId == abap",

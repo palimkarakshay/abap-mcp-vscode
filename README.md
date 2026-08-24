@@ -7,7 +7,7 @@ directly into Visual Studio Code. **No SAP system, credentials, or network requi
 Two integrations in one extension:
 
 1. **MCP server registration** — registers abap-mcp as a stdio MCP server with VS Code's Language
-   Model API. Once installed, abap-mcp's 12 tools and 3 guided-workflow prompts appear
+   Model API. Once installed, abap-mcp's 13 tools and 3 guided-workflow prompts appear
    automatically in **Copilot agent mode** — nothing to configure.
 2. **Native editor commands** — analyze the file in front of you with the Command Palette or the
    editor context menu; findings land in the **Problems panel** and an **ABAP MCP output channel**.
@@ -25,6 +25,7 @@ Two integrations in one extension:
 
 | Command | What it does | Result surface |
 | --- | --- | --- |
+| **ABAP: Auto-fix (deterministic)** | **Highlight a block (or nothing, for the whole file) and get abaplint's machine fixes applied instantly** — keyword casing, obsolete statements (`MOVE` → `=`, …). Parser-guaranteed, zero AI; whatever needs judgment is reported for Copilot to finish (verify with `compare_abap`). Needs abap-mcp ≥ 0.9.0. | edits the buffer/selection in place |
 | **ABAP: Lint** | abaplint over the active file (`lint --json`) | Problems panel (rule + line + docs link) |
 | **ABAP: Cloud Readiness** | ABAP Cloud / Clean Core readiness diff (`readiness --json`) | Output channel (verdict, score, blocker categories, released-API notes) + diagnostics |
 | **ABAP: Format** | abap-mcp's `formatAbap` over the buffer | rewrites the editor buffer |

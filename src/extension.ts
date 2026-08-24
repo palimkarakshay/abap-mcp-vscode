@@ -17,6 +17,7 @@ import * as vscode from "vscode";
 import { isAbapGitName, suggestAbapGitName } from "./abapgit";
 import { CliNotFoundError, resolveCli, runCli, runCliJson } from "./cli";
 import { findingsToDiagnostics } from "./diagnostics";
+import { autofixAbap } from "./autofix";
 import { formatAbapBuffer } from "./format";
 import { registerMcpProvider } from "./mcpProvider";
 import type { CompareReport, FileOutline, LintResult, ReadinessResult } from "./types";
@@ -37,6 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("abapMcp.lint", () => withActiveAbap(context, runLint)),
     vscode.commands.registerCommand("abapMcp.readiness", () => withActiveAbap(context, runReadiness)),
     vscode.commands.registerCommand("abapMcp.format", () => withActiveAbap(context, runFormat)),
+    vscode.commands.registerCommand("abapMcp.fix", () => runAutofix(context)),
     vscode.commands.registerCommand("abapMcp.outline", () => withActiveAbap(context, runOutline)),
     vscode.commands.registerCommand("abapMcp.scaffold", () => runScaffold(context)),
     vscode.commands.registerCommand("abapMcp.compare", () => runCompare(context)),
@@ -194,6 +196,56 @@ async function runReadiness(context: vscode.ExtensionContext, doc: vscode.TextDo
 // ---------------------------------------------------------------------------
 // ABAP: Format
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// ABAP: Auto-fix (deterministic) — selection-aware
+// ---------------------------------------------------------------------------
+
+async function runAutofix(context: vscode.ExtensionContext): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    void vscode.window.showWarningMessage("ABAP MCP: open an ABAP file first.");
+    return;
+  }
+  const doc = editor.document;
+  const selection = editor.selection;
+  const onSelection = !selection.isEmpty;
+  // A highlighted fragment is fixed as a program snippet; a whole buffer keeps
+  // its real abapGit name so the right object type drives the rules.
+  const name = onSelection
+    ? "snippet.prog.abap"
+    : (doc.fileName.split(/[\\/]/).pop() ?? doc.fileName);
+  const source = onSelection ? doc.getText(selection) : doc.getText();
+  try {
+    const result = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Window, title: "ABAP MCP: applying deterministic fixes…" },
+      () => autofixAbap(context.extensionPath, source, name),
+    );
+    if (result.fixedCount === 0 || result.source === source) {
+      void vscode.window.showInformationMessage(
+        `ABAP MCP: nothing to auto-fix${result.remainingCount > 0 ? ` — ${result.remainingCount} finding(s) need judgment (ask Copilot, verify with compare_abap)` : ""}.`,
+      );
+      return;
+    }
+    const range = onSelection
+      ? new vscode.Range(selection.start, selection.end)
+      : new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, range, result.source);
+    await vscode.workspace.applyEdit(edit);
+    const rules = Object.entries(result.rules)
+      .map(([r, n]) => `${r}×${n}`)
+      .join(", ");
+    void vscode.window.showInformationMessage(
+      `ABAP MCP: ${result.fixedCount} fix(es) applied [${rules}]` +
+        (result.remainingCount > 0
+          ? ` — ${result.remainingCount} finding(s) need judgment (ask Copilot, verify with compare_abap).`
+          : "."),
+    );
+  } catch (e) {
+    reportError(e);
+  }
+}
 
 async function runFormat(context: vscode.ExtensionContext, doc: vscode.TextDocument): Promise<void> {
   const name = doc.fileName.split(/[\\/]/).pop() ?? doc.fileName;
