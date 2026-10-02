@@ -4,7 +4,7 @@ VS Code extension that brings **abap-mcp** into the editor. Two angles: (1) regi
 a stdio **MCP server** for Copilot agent mode via `vscode.lm.registerMcpServerDefinitionProvider`
 (VS Code 1.101+); (2) native **editor commands** (Lint, Cloud Readiness, Format, Scaffold RAP BO,
 Outline) that shell out to the abap-mcp CLI / `formatAbap` library and render diagnostics + output.
-Lumivara product line: **SAP**. **Public MIT** (personal GitHub `palimkarakshay/abap-mcp-vscode`).
+Product line: **SAP**. **Public MIT** (personal GitHub `palimkarakshay/abap-mcp-vscode`).
 
 ## Package manager: npm — Node >= 20, VS Code ^1.101.0
 
